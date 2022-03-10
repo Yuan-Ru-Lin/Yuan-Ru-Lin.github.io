@@ -29,7 +29,7 @@
 ·
 </span>
 <span>
-579 words
+556 words
 </span>
 <span class=split>
 ·
@@ -38,58 +38,20 @@
 3 minute read
 </span>
 </div><div class=content>
-## Prologue
-This is a record of a workshop on statistics
-held among the High-Energy Physics group of National Taiwan University in 2022.
-The textbook referred to throughout the record is
-Behnke, O. (2013) *Data analysis in high energy physics a practical guide to statistical methods / edited by Olaf Behnke...[et al.].* 1st ed. Weinheim, Germany: Wiley-VCH.
-In this week, we covered Sec.2.4–2.6, which was mainly about the method of least squares and maximum-likelihood fits.
-The workshop was to let the participants reproduce the histogram fitting on $M_{\mu^+\mu^-}$ in Subsubsec.2.4.2.1.
-## Tools[^imports]
-[^imports]: It’s assumed that you’ve already imported the familiar modules i.e. `import numpy as np; import matplotlib.pyplot as plt; import scipy.stats as st; import scipy.optimize as opt`.
-### `np.concatenate`
-```python
-a = np.asarray([1, 2])
-b = np.asarray([3, 4])
-c = np.concatenate((a, b)) # Note the ntuple!
-print(c)
-```
-```plaintext
-[1 2 3 4]
-```
-### `plt.hist`
-Does not just draw a histogram, but also returns the histogram and the bins in use.
-```python
-entries, bins, _ = plt.hist(st.norm.rvs(size=1000))
-```
-## Least-Squares Fit
-### Prepare pseudo-data and histograms
-By inspection and information given in the book, it seems that
-* the number of bins is 60,
-* the background events can be simulated by `st.uniform(loc=2, scale=2)` and the event number is roughly 1000, and
-* the signal events can be simulated by `st.norm(loc=3.1, scale=0.05)` and the event number is roughly 100.
-![The dataset should look like this.](./data.png)
-### Construct expected number of events in each bin
-Assuming we know the exact numbers of background and signal events, then the number of events in each bin is just $$f_i = 1000 \cdot f^B_i + 100 \cdot f^S_i,$$ where $f^B_i$ and $f^S_i$ are probabilities of events in the $i$\-th bin i.e.
-$$\begin{aligned}
+<h2 id=prologue>Prologue</h2><p>This is a record of a workshop on statistics held among the High-Energy Physics group of National Taiwan University in 2022.</p><p>The textbook referred to throughout the record is Behnke, O. (2013) <em>Data analysis in high energy physics a practical guide to statistical methods / edited by Olaf Behnke…[et al.].</em> 1st ed. Weinheim, Germany: Wiley-VCH.</p><p>In this week, we covered Sec.2.4–2.6, which was mainly about the method of least squares and maximum-likelihood fits.</p><p>The workshop was to let the participants reproduce the histogram fitting on <span class="math inline">\(M_{\mu^+\mu^-}\)</span> in Subsubsec.2.4.2.1.</p><h2 id=toolsimports>Tools<a href=#fn1 class=footnote-ref id=fnref1><sup>1</sup></a></h2><h3 id=np.concatenate><code>np.concatenate</code></h3><div class=sourceCode id=cb1><pre class="sourceCode python"><code class="sourceCode python"><a class=sourceLine id=cb1-1 title=1>a <span class=op>=</span> np.asarray([<span class=dv>1</span>, <span class=dv>2</span>])</a>
+<a class=sourceLine id=cb1-2 title=2>b <span class=op>=</span> np.asarray([<span class=dv>3</span>, <span class=dv>4</span>])</a>
+<a class=sourceLine id=cb1-3 title=3>c <span class=op>=</span> np.concatenate((a, b))  <span class=co># Note the ntuple!</span></a>
+<a class=sourceLine id=cb1-4 title=4><span class=bu>print</span>(c)</a></code></pre></div><pre class=plaintext><code>[1 2 3 4]</code></pre><h3 id=plt.hist><code>plt.hist</code></h3><p>Does not just draw a histogram, but also returns the histogram and the bins in use.</p><div class=sourceCode id=cb3><pre class="sourceCode python"><code class="sourceCode python"><a class=sourceLine id=cb3-1 title=1>entries, bins, _ <span class=op>=</span> plt.hist(st.norm.rvs(size<span class=op>=</span><span class=dv>1000</span>))</a></code></pre></div><h2 id=least-squares-fit>Least-Squares Fit</h2><h3 id=prepare-pseudo-data-and-histograms>Prepare pseudo-data and histograms</h3><p>By inspection and information given in the book, it seems that</p><ul>
+<li>the number of bins is 60,</li><li>the background events can be simulated by <code>st.uniform(loc=2, scale=2)</code> and the event number is roughly 1000, and</li><li>the signal events can be simulated by <code>st.norm(loc=3.1, scale=0.05)</code> and the event number is roughly 100.</li></ul><figure>
+<img src=./data.png alt="The dataset should look like this."><figcaption>The dataset should look like this.</figcaption></figure><h3 id=construct-expected-number-of-events-in-each-bin>Construct expected number of events in each bin</h3><p>Assuming we know the exact numbers of background and signal events, then the number of events in each bin is just <span class="math display">\[f_i = 1000 \cdot f^B_i + 100 \cdot f^S_i,\]</span> where <span class="math inline">\(f^B_i\)</span> and <span class="math inline">\(f^S_i\)</span> are probabilities of events in the <span class="math inline">\(i\)</span>-th bin i.e. </p><p><span class="math display">\[\begin{aligned}
 f^B_i &= \int^{x^{\mathrm{up}}_i}_{x^{\mathrm{low}}_i} f^B(x) \,dx, \\
 f^S_i &= \int^{x^{\mathrm{up}}_i}_{x^{\mathrm{low}}_i} f^S(x;M) \,dx.
-\end{aligned}$$
-In the discrete case, we can approximate the integral as $$f^B_i = \int^{x^{\mathrm{up}}_i}_{x^{\mathrm{low}}_i} f^B \,dx \approx \sum_i f^B(x^c_i) \,\Delta x_i,$$ and so on, where $x^c_i$ is the center of the bin i.e. $x^c_i = (x^{\mathrm{up}}_i+x^{\mathrm{low}}_i)/2.$
-![The expected number of events, when drawn on the previous plot, should look like this. Here $M = 3.1$.](./data_with_pdf.png)
-### Calculate, plot and minimize $\chi^2$
-Recall that the (Neyman's) $\chi^2$ value can be calculated as $$\chi^2(M) = \sum_{\text{bin} i} \frac{\Big[k_i - f_i(M)\Big]^2}{k_i}.$$
-![Your $\chi^2$ values should look like this.](./chi2.png)
-## Binned Maximum-Likelihood Fits
-Use the same dataset (and the same histogram) to perform Binned MLE. Note that the log-likelihood in the binned case is $$\ln L(M) = \sum^B_{i=1} k_i \ln P_i(M) + \textrm{constant},$$ where $P_i(M)$ is the **likelihood** computed with the probability of events falling within the $i$\-th bin.
-## Remarks
-### On Numbers of Generated Events
-What would happen if we only generated `st.norm.rvs(loc=3.1, scale=0.05, size=100)` and set bins as `np.linspace(-5, 5, 101)` instead? What assumption of Least-Squares Fit would be violated? What Python error would you get?
-### On Assumptions of Event Numbers
-Recall that we assume that we know the exact numbers of both signal and background events. That is not a common situation in practice, though. We typically need to turn those event numbers into parameters as well. And that is what the next week's workshop is about, Extended Maximum-Likelihood Fits.
-### On $\chi^2_\textrm{min}$
-You may get $\chi^2_\textrm{min}$ deviated from the expected value, which is 59, as much as, say, 68. Do you think it's reasonable? (Hint: go the wikipedia page of $\chi^2$ distribution and look for the quantity related to expected deviation from the expected value.)
-</div><div id=comment>
+\end{aligned}\]</span></p><p>In the discrete case, we can approximate the integral as <span class="math display">\[f^B_i = \int^{x^{\mathrm{up}}_i}_{x^{\mathrm{low}}_i} f^B \,dx \approx \sum_i f^B(x^c_i) \,\Delta x_i,\]</span> and so on, where <span class="math inline">\(x^c_i\)</span> is the center of the bin i.e. <span class="math inline">\(x^c_i = (x^{\mathrm{up}}_i+x^{\mathrm{low}}_i)/2.\)</span></p><figure>
+<img src=./data_with_pdf.png alt="The expected number of events, when drawn on the previous plot, should look like this. Here M = 3.1."><figcaption>The expected number of events, when drawn on the previous plot, should look like this. Here <span class="math inline">\(M = 3.1\)</span>.</figcaption></figure><h3 id=calculate-plot-and-minimize-chi2>Calculate, plot and minimize <span class="math inline">\(\chi^2\)</span></h3><p>Recall that the (Neyman’s) <span class="math inline">\(\chi^2\)</span> value can be calculated as <span class="math display">\[\chi^2(M) = \sum_{\text{bin} i} \frac{\Big[k_i - f_i(M)\Big]^2}{k_i}.\]</span></p><figure>
+<img src=./chi2.png alt="Your \chi^2 values should look like this."><figcaption>Your <span class="math inline">\(\chi^2\)</span> values should look like this.</figcaption></figure><h2 id=binned-maximum-likelihood-fits>Binned Maximum-Likelihood Fits</h2><p>Use the same dataset (and the same histogram) to perform Binned MLE. Note that the log-likelihood in the binned case is <span class="math display">\[\ln L(M) = \sum^B_{i=1} k_i \ln P_i(M) + \textrm{constant},\]</span> where <span class="math inline">\(P_i(M)\)</span> is the <strong>likelihood</strong> computed with the probability of events falling within the <span class="math inline">\(i\)</span>-th bin.</p><h2 id=remarks>Remarks</h2><h3 id=on-numbers-of-generated-events>On Numbers of Generated Events</h3><p>What would happen if we only generated <code>st.norm.rvs(loc=3.1, scale=0.05, size=100)</code> and set bins as <code>np.linspace(-5, 5, 101)</code> instead? What assumption of Least-Squares Fit would be violated? What Python error would you get?</p><h3 id=on-assumptions-of-event-numbers>On Assumptions of Event Numbers</h3><p>Recall that we assume that we know the exact numbers of both signal and background events. That is not a common situation in practice, though. We typically need to turn those event numbers into parameters as well. And that is what the next week’s workshop is about, Extended Maximum-Likelihood Fits.</p><h3 id=on-chi2_textrmmin>On <span class="math inline">\(\chi^2_\textrm{min}\)</span></h3><p>You may get <span class="math inline">\(\chi^2_\textrm{min}\)</span> deviated from the expected value, which is 59, as much as, say, 68. Do you think it’s reasonable? (Hint: go the wikipedia page of <span class="math inline">\(\chi^2\)</span> distribution and look for the quantity related to expected deviation from the expected value.)</p><section class=footnotes>
+<hr>
+<ol>
+<li id=fn1><p>It’s assumed that you’ve already imported the familiar modules i.e. <code>import numpy as np; import matplotlib.pyplot as plt; import scipy.stats as st; import scipy.optimize as opt</code>.<a href=#fnref1 class=footnote-back>↩</a></p></li></ol></section></div><div id=comment>
 <script src=https://utteranc.es/client.js repo=Yuan-Ru-Lin/yuan-ru-lin.github.io issue-term=url theme=github-light crossorigin=anonymous async></script>
 </div></section></main><footer id=footer>
 <div id=social>
